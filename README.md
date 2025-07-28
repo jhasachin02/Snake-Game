@@ -2,6 +2,9 @@
 
 A modern, responsive Snake Game built with React and TypeScript.
 
+## Live Demo
+Play here: [https://snake-game02.netlify.app/](https://snake-game02.netlify.app/)
+
 ## Features
 - Classic snake gameplay
 - Responsive design for mobile and desktop
