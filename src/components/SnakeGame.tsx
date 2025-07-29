@@ -1,4 +1,34 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+// Helper for detecting touch swipe direction
+function useSwipe(onSwipe: (dir: { x: number; y: number }) => void) {
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  useEffect(() => {
+    function handleTouchStart(e: TouchEvent) {
+      const t = e.touches[0];
+      touchStart.current = { x: t.clientX, y: t.clientY };
+    }
+    function handleTouchEnd(e: TouchEvent) {
+      if (!touchStart.current) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - touchStart.current.x;
+      const dy = t.clientY - touchStart.current.y;
+      if (Math.abs(dx) > 30 || Math.abs(dy) > 30) {
+        if (Math.abs(dx) > Math.abs(dy)) {
+          onSwipe(dx > 0 ? { x: 1, y: 0 } : { x: -1, y: 0 });
+        } else {
+          onSwipe(dy > 0 ? { x: 0, y: 1 } : { x: 0, y: -1 });
+        }
+      }
+      touchStart.current = null;
+    }
+    window.addEventListener('touchstart', handleTouchStart);
+    window.addEventListener('touchend', handleTouchEnd);
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [onSwipe]);
+}
 import { Play, Pause, RotateCcw, Trophy } from 'lucide-react';
 
 interface Position {
@@ -23,6 +53,23 @@ const INITIAL_DIRECTION = { x: 1, y: 0 };
 const INITIAL_SPEED = 150;
 
 const SnakeGame: React.FC = () => {
+  // Handle swipe gestures for mobile
+  useSwipe((swipeDir) => {
+    if (!gameState.isPlaying) return;
+    const prev = directionRef.current;
+    // Prevent reverse
+    if (
+      (swipeDir.x === 0 && prev.y === 0) ||
+      (swipeDir.y === 0 && prev.x === 0)
+    ) return;
+    if (
+      (swipeDir.x === 1 && prev.x === -1) ||
+      (swipeDir.x === -1 && prev.x === 1) ||
+      (swipeDir.y === 1 && prev.y === -1) ||
+      (swipeDir.y === -1 && prev.y === 1)
+    ) return;
+    directionRef.current = swipeDir;
+  });
   const [gameState, setGameState] = useState<GameState>({
     snake: INITIAL_SNAKE,
     food: INITIAL_FOOD,
@@ -248,7 +295,26 @@ const SnakeGame: React.FC = () => {
             </div>
           </div>
 
-          {/* Controls */}
+        {/* Controls */}
+        {/* On-screen arrow controls for mobile */}
+        <div className="flex flex-col items-center gap-2 mt-4 sm:flex md:flex lg:hidden">
+          <div className="flex justify-center gap-8 md:gap-12">
+            <button aria-label="Up" className="bg-gradient-to-b from-emerald-400 to-emerald-600 rounded-full p-4 md:p-6 shadow-lg border-2 border-emerald-700 active:scale-95 transition-all hover:from-emerald-300 hover:to-emerald-500 hover:shadow-emerald-400/50" onClick={() => { if (directionRef.current.y === 0) directionRef.current = { x: 0, y: -1 }; }}>
+              <svg width="32" height="32" fill="none" stroke="white" strokeWidth="2"><path d="M16 27V5M5 16l11-11 11 11"/></svg>
+            </button>
+          </div>
+          <div className="flex justify-center gap-8 md:gap-12">
+            <button aria-label="Left" className="bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full p-4 md:p-6 shadow-lg border-2 border-emerald-700 active:scale-95 transition-all hover:from-emerald-300 hover:to-emerald-500 hover:shadow-emerald-400/50" onClick={() => { if (directionRef.current.x === 0) directionRef.current = { x: -1, y: 0 }; }}>
+              <svg width="32" height="32" fill="none" stroke="white" strokeWidth="2"><path d="M27 16H5M16 27l-11-11 11-11"/></svg>
+            </button>
+            <button aria-label="Down" className="bg-gradient-to-t from-emerald-400 to-emerald-600 rounded-full p-4 md:p-6 shadow-lg border-2 border-emerald-700 active:scale-95 transition-all hover:from-emerald-300 hover:to-emerald-500 hover:shadow-emerald-400/50" onClick={() => { if (directionRef.current.y === 0) directionRef.current = { x: 0, y: 1 }; }}>
+              <svg width="32" height="32" fill="none" stroke="white" strokeWidth="2"><path d="M16 5v22M5 16l11 11 11-11"/></svg>
+            </button>
+            <button aria-label="Right" className="bg-gradient-to-l from-emerald-400 to-emerald-600 rounded-full p-4 md:p-6 shadow-lg border-2 border-emerald-700 active:scale-95 transition-all hover:from-emerald-300 hover:to-emerald-500 hover:shadow-emerald-400/50" onClick={() => { if (directionRef.current.x === 0) directionRef.current = { x: 1, y: 0 }; }}>
+              <svg width="32" height="32" fill="none" stroke="white" strokeWidth="2"><path d="M5 16h22M16 5l11 11-11 11"/></svg>
+            </button>
+          </div>
+        </div>
           <div className="flex-1 min-w-0">
             <div className="space-y-6">
               {/* Game Controls */}
